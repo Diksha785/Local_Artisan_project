@@ -1,30 +1,41 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, Clock, Truck, CheckCircle2, ChevronDown, ChevronUp, MapPin, CreditCard, ArrowRight } from 'lucide-react';
+import { Package, Clock, Truck, CheckCircle2, ChevronDown, ChevronUp, MapPin, CreditCard, ArrowRight, RefreshCw, XCircle } from 'lucide-react';
 import OrderStatusBadge from '../components/OrderStatusBadge';
 import { api } from '../services/api';
 
 export default function BuyerOrdersPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [expandedOrder, setExpandedOrder] = useState(null);
 
-  useEffect(() => {
-    async function loadOrders() {
-      try {
-        const data = await api.getMyOrders();
-        setOrders(data);
-        if (data && data.length > 0) {
-          setExpandedOrder(data[0]._id);
-        }
-      } catch (err) {
-        console.error('Error fetching buyer orders:', err);
-      } finally {
-        setLoading(false);
+  const fetchOrders = useCallback(async (isManual = false) => {
+    if (isManual) setRefreshing(true);
+    try {
+      const data = await api.getMyOrders();
+      setOrders(data);
+      if (data && data.length > 0 && !expandedOrder) {
+        setExpandedOrder(data[0]._id);
       }
+    } catch (err) {
+      console.error('Error fetching buyer orders:', err);
+    } finally {
+      setLoading(false);
+      if (isManual) setRefreshing(false);
     }
-    loadOrders();
-  }, []);
+  }, [expandedOrder]);
+
+  useEffect(() => {
+    fetchOrders();
+
+    // Auto-polling interval every 12 seconds for prompt status updates
+    const interval = setInterval(() => {
+      fetchOrders();
+    }, 12000);
+
+    return () => clearInterval(interval);
+  }, [fetchOrders]);
 
   if (loading) {
     return (
@@ -46,13 +57,25 @@ export default function BuyerOrdersPage() {
             Monitor fulfillment progress of your handmade rural crafts from artisan workshop to delivery
           </p>
         </div>
-        <Link
-          to="/products"
-          className="bg-terracotta-600 hover:bg-terracotta-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-xs transition-all flex items-center gap-1.5 self-start sm:self-auto active:scale-95"
-        >
-          <span>Explore Crafts</span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </Link>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => fetchOrders(true)}
+            disabled={refreshing}
+            className="bg-white hover:bg-amber-100 border border-amber-300 text-stone-800 font-bold text-xs px-3.5 py-2.5 rounded-xl transition-all flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50"
+            title="Refresh order status"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-terracotta-600 ${refreshing ? 'animate-spin' : ''}`} />
+            <span>{refreshing ? 'Refreshing...' : 'Refresh Status'}</span>
+          </button>
+          <Link
+            to="/products"
+            className="bg-terracotta-600 hover:bg-terracotta-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-xs transition-all flex items-center gap-1.5 self-start sm:self-auto active:scale-95"
+          >
+            <span>Explore Crafts</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
       </div>
 
       {orders.length === 0 ? (

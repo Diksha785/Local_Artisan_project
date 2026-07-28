@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Store, TrendingUp, ShoppingBag, Clock, CheckCircle2, Star, Plus, RefreshCw, AlertCircle } from 'lucide-react';
 import OrderStatusBadge from '../components/OrderStatusBadge';
+import SalesTrendChart from '../components/SalesTrendChart';
+import TopProductsChart from '../components/TopProductsChart';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -146,6 +148,12 @@ export default function ArtisanDashboardPage() {
         </div>
 
       </div>
+
+      {/* Visual Analytics Charts Section */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <SalesTrendChart data={analytics?.monthlyRevenue} />
+        <TopProductsChart products={analytics?.topProducts} />
+      </section>
 
       {/* Orders Management Table */}
       <section className="bg-white border border-amber-200 rounded-3xl p-6 shadow-xs space-y-6">

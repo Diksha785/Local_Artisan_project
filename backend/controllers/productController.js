@@ -293,28 +293,86 @@ const createProduct = async (req, res) => {
 const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
+    const {
+      title,
+      description,
+      audioStory,
+      price,
+      category,
+      stateOfOrigin,
+      materialsUsed,
+      dimensions,
+      weight,
+      stock,
+      images,
+      ecoFriendly
+    } = req.body;
+
+    const currentUserId = req.user.id || req.user._id || 'mock_artisan_1';
 
     if (isDBConnected()) {
       let product = await Product.findById(id);
       if (!product) return res.status(404).json({ message: 'Product not found' });
 
       // Check ownership
-      if (product.artisan.toString() !== req.user.id && req.user.role !== 'admin') {
+      if (product.artisan.toString() !== currentUserId.toString() && req.user.role !== 'admin') {
         return res.status(403).json({ message: 'Not authorized to edit this product' });
       }
 
-      Object.assign(product, req.body);
+      if (title !== undefined) product.title = title;
+      if (description !== undefined) product.description = description;
+      if (audioStory !== undefined) product.audioStory = audioStory;
+      if (price !== undefined) product.price = Number(price);
+      if (category !== undefined) product.category = category;
+      if (stateOfOrigin !== undefined) product.stateOfOrigin = stateOfOrigin;
+      if (materialsUsed !== undefined) {
+        product.materialsUsed = Array.isArray(materialsUsed)
+          ? materialsUsed
+          : materialsUsed.split(',').map((s) => s.trim()).filter(Boolean);
+      }
+      if (dimensions !== undefined) product.dimensions = dimensions;
+      if (weight !== undefined) product.weight = weight;
+      if (stock !== undefined) product.stock = Number(stock);
+      if (images !== undefined) product.images = images;
+      if (ecoFriendly !== undefined) product.ecoFriendly = ecoFriendly;
+
       const updatedProduct = await product.save();
       return res.json(updatedProduct);
     } else {
       const index = localProducts.findIndex(p => p._id.toString() === id.toString());
       if (index === -1) return res.status(404).json({ message: 'Product not found' });
 
-      localProducts[index] = { ...localProducts[index], ...req.body };
-      return res.json(localProducts[index]);
+      const prod = localProducts[index];
+      if (prod.artisan && prod.artisan !== 'mock_artisan_1' && prod.artisan.toString() !== currentUserId.toString() && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Not authorized to edit this product' });
+      }
+
+      const updated = {
+        ...prod,
+        ...(title !== undefined && { title }),
+        ...(description !== undefined && { description }),
+        ...(audioStory !== undefined && { audioStory }),
+        ...(price !== undefined && { price: Number(price) }),
+        ...(category !== undefined && { category }),
+        ...(stateOfOrigin !== undefined && { stateOfOrigin }),
+        ...(materialsUsed !== undefined && {
+          materialsUsed: Array.isArray(materialsUsed)
+            ? materialsUsed
+            : materialsUsed.split(',').map((s) => s.trim()).filter(Boolean)
+        }),
+        ...(dimensions !== undefined && { dimensions }),
+        ...(weight !== undefined && { weight }),
+        ...(stock !== undefined && { stock: Number(stock) }),
+        ...(images !== undefined && { images }),
+        ...(ecoFriendly !== undefined && { ecoFriendly })
+      };
+
+      localProducts[index] = updated;
+      return res.json(updated);
     }
   } catch (error) {
-    res.status(500).json({ message: 'Error updating product', error: error.message });
+    console.error('Update Product Error:', error);
+    res.status(500).json({ message: 'Error updating product listing', error: error.message });
   }
 };
 

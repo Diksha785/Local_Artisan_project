@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const User = require('../models/User');
 const mongoose = require('mongoose');
 
@@ -162,4 +163,60 @@ const getUserProfile = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser, getUserProfile };
+// @desc    Forgot Password - Generate Reset Token
+// @route   POST /api/auth/forgot-password
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email || !email.trim()) {
+      return res.status(400).json({ message: 'Please provide an email address' });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    
+    // Generate random unhashed token
+    const resetToken = crypto.randomBytes(20).toString('hex');
+
+    // Hash token to store in database (SHA-256)
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    const expireTime = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes expiration
+
+    if (isDBConnected()) {
+      const user = await User.findOne({ email: normalizedEmail });
+      if (!user) {
+        // Return generic success to prevent user enumeration
+        return res.json({
+          success: true,
+          message: 'If an account with that email exists, password reset instructions have been sent.'
+        });
+      }
+
+      user.resetPasswordToken = hashedToken;
+      user.resetPasswordExpire = expireTime;
+      await user.save();
+
+      return res.json({
+        success: true,
+        message: 'Password reset link generated successfully.',
+        resetToken: resetToken
+      });
+    } else {
+      // Memory fallback for mock mode
+      const user = memoryUsers.find(u => u.email === normalizedEmail);
+      if (user) {
+        user.resetPasswordToken = hashedToken;
+        user.resetPasswordExpire = expireTime;
+      }
+      return res.json({
+        success: true,
+        message: 'Password reset link generated (mock mode).',
+        resetToken: resetToken
+      });
+    }
+  } catch (error) {
+    console.error('Forgot Password Error:', error);
+    res.status(500).json({ message: 'Server error processing password reset request', error: error.message });
+  }
+};
+
+module.exports = { registerUser, loginUser, getUserProfile, forgotPassword };

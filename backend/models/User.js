@@ -63,6 +63,12 @@ const userSchema = new mongoose.Schema({
   rating: {
     type: Number,
     default: 4.8
+  },
+  resetPasswordToken: {
+    type: String
+  },
+  resetPasswordExpire: {
+    type: Date
   }
 }, { timestamps: true });
 

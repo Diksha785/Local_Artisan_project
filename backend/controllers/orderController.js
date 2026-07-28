@@ -140,7 +140,7 @@ const createOrder = async (req, res) => {
 // @route   GET /api/orders/my-orders
 const getMyOrders = async (req, res) => {
   try {
-    const buyerId = req.user.id || req.user._id;
+    const buyerId = req.user.id || req.user._id || 'mock_buyer_1';
 
     if (isDBConnected()) {
       const orders = await Order.find({ buyer: buyerId }).sort({ createdAt: -1 });
@@ -152,6 +152,7 @@ const getMyOrders = async (req, res) => {
       return res.json(orders);
     }
   } catch (error) {
+    console.error('Fetch My Orders Error:', error);
     res.status(500).json({ message: 'Error fetching order history', error: error.message });
   }
 };

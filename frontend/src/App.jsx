@@ -21,6 +21,7 @@ import ArtisanProductsPage from './pages/ArtisanProductsPage';
 import ProductFormPage from './pages/ProductFormPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 
 export default function App() {
   return (
@@ -100,6 +101,7 @@ export default function App() {
                   {/* Auth Routes */}
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/register" element={<RegisterPage />} />
+                  <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                 </Routes>
               </main>
               <Footer />

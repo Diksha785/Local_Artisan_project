@@ -35,10 +35,17 @@ export default function ImageUploader({ images = [], setImages }) {
     setImages(images.filter((_, i) => i !== index));
   };
 
+  const setAsMain = (index) => {
+    if (index === 0) return;
+    const selected = images[index];
+    const remaining = images.filter((_, i) => i !== index);
+    setImages([selected, ...remaining]);
+  };
+
   return (
     <div className="space-y-3">
       <label className="block text-sm font-semibold text-stone-800">
-        Craft Images (Cloudinary Multi-Upload) <span className="text-terracotta-600">*</span>
+        Craft Images & Gallery <span className="text-terracotta-600">*</span>
       </label>
 
       {/* Upload Box */}
@@ -57,7 +64,7 @@ export default function ImageUploader({ images = [], setImages }) {
           </div>
           <div>
             <p className="text-sm font-semibold text-stone-800">
-              {uploading ? 'Uploading to Cloudinary...' : 'Click or Drag images to upload'}
+              {uploading ? 'Uploading Images...' : 'Click or Drag images to upload'}
             </p>
             <p className="text-xs text-stone-500 mt-1">
               Supports JPG, PNG, WEBP up to 10MB (Max 5 photos)
@@ -67,28 +74,41 @@ export default function ImageUploader({ images = [], setImages }) {
       </div>
 
       {uploadError && (
-        <p className="text-xs font-semibold text-rose-600 bg-rose-50 p-2 rounded-lg border border-rose-200">
+        <p className="text-xs font-semibold text-rose-600 bg-rose-50 p-2.5 rounded-xl border border-rose-200">
           {uploadError}
         </p>
       )}
 
       {/* Preview Grid */}
       {images.length > 0 && (
-        <div className="grid grid-cols-5 gap-3 pt-2">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-2">
           {images.map((url, idx) => (
-            <div key={idx} className="relative group rounded-xl overflow-hidden aspect-square border border-amber-200 shadow-sm bg-stone-100">
-              <img src={url} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover" />
+            <div key={idx} className="relative group rounded-xl overflow-hidden aspect-square border border-amber-200 shadow-xs bg-stone-100">
+              <img src={url} alt={`Craft ${idx + 1}`} className="w-full h-full object-cover" />
+              
+              {/* Delete Button */}
               <button
                 type="button"
                 onClick={() => removeImage(idx)}
-                className="absolute top-1.5 right-1.5 p-1 bg-rose-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+                title="Remove image"
+                className="absolute top-1.5 right-1.5 p-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
-              {idx === 0 && (
-                <span className="absolute bottom-1 left-1 bg-terracotta-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow">
-                  Main
+
+              {/* Main Badge / Set as Main Button */}
+              {idx === 0 ? (
+                <span className="absolute bottom-1.5 left-1.5 bg-terracotta-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-md shadow-xs">
+                  ★ Main
                 </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setAsMain(idx)}
+                  className="absolute bottom-1.5 left-1.5 bg-stone-900/80 hover:bg-stone-900 text-white text-[10px] font-bold px-2 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity shadow-xs cursor-pointer"
+                >
+                  Set Main
+                </button>
               )}
             </div>
           ))}

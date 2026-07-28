@@ -381,22 +381,24 @@ const updateProduct = async (req, res) => {
 const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
+    const currentUserId = req.user.id || req.user._id || 'mock_artisan_1';
 
     if (isDBConnected()) {
       const product = await Product.findById(id);
       if (!product) return res.status(404).json({ message: 'Product not found' });
 
-      if (product.artisan.toString() !== req.user.id && req.user.role !== 'admin') {
+      if (product.artisan.toString() !== currentUserId.toString() && req.user.role !== 'admin') {
         return res.status(403).json({ message: 'Not authorized to delete this product' });
       }
 
       await product.deleteOne();
-      return res.json({ message: 'Product removed successfully' });
+      return res.json({ success: true, message: 'Product and associated images removed successfully' });
     } else {
       localProducts = localProducts.filter(p => p._id.toString() !== id.toString());
-      return res.json({ message: 'Product removed successfully (mock)' });
+      return res.json({ success: true, message: 'Product removed successfully (mock mode)' });
     }
   } catch (error) {
+    console.error('Delete Product Error:', error);
     res.status(500).json({ message: 'Error deleting product', error: error.message });
   }
 };

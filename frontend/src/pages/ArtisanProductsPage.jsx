@@ -6,6 +6,8 @@ import { api } from '../services/api';
 export default function ArtisanProductsPage() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState(null);
+  const [actionFeedback, setActionFeedback] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
 
@@ -37,14 +39,20 @@ export default function ArtisanProductsPage() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this craft listing?')) return;
+  const handleDelete = async (id, title) => {
+    if (!window.confirm(`Are you sure you want to delete "${title || 'this craft listing'}"? This action cannot be undone.`)) return;
 
+    setDeletingId(id);
+    setActionFeedback('');
     try {
       await api.deleteProduct(id);
-      setProducts(products.filter((p) => p._id !== id));
+      setProducts((prev) => prev.filter((p) => p._id !== id));
+      setActionFeedback(`Craft listing "${title || ''}" removed successfully.`);
+      setTimeout(() => setActionFeedback(''), 4000);
     } catch (err) {
       alert(err.message || 'Delete failed');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -258,8 +266,9 @@ export default function ArtisanProductsPage() {
                       <Edit className="w-4 h-4" />
                     </Link>
                     <button
-                      onClick={() => handleDelete(product._id)}
-                      className="p-2 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                      onClick={() => handleDelete(product._id, product.title)}
+                      disabled={deletingId === product._id}
+                      className="p-2 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
                       title="Delete Product"
                     >
                       <Trash2 className="w-4 h-4" />

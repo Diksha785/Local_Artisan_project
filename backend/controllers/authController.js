@@ -1,0 +1,163 @@
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+const User = require('../models/User');
+const mongoose = require('mongoose');
+
+const generateToken = (id, role, name, email) => {
+  return jwt.sign(
+    { id, role, name, email },
+    process.env.JWT_SECRET || 'artisan_secret_key_2026',
+    { expiresIn: '30d' }
+  );
+};
+
+// In-memory mock storage fallback if MongoDB is not connected
+const memoryUsers = [];
+
+const isDBConnected = () => mongoose.connection.readyState === 1;
+
+// @desc    Register a new user (Buyer or Artisan)
+// @route   POST /api/auth/register
+const registerUser = async (req, res) => {
+  try {
+    const { name, email, password, role, phone, craftSpecialty, stateOfOrigin, district, village, bio } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: 'Please enter all required fields' });
+    }
+
+    if (isDBConnected()) {
+      const userExists = await User.findOne({ email: email.toLowerCase() });
+      if (userExists) {
+        return res.status(400).json({ message: 'User already exists with this email' });
+      }
+
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+
+      const user = await User.create({
+        name,
+        email: email.toLowerCase(),
+        password: hashedPassword,
+        role: role || 'buyer',
+        phone: phone || '',
+        craftSpecialty: craftSpecialty || '',
+        stateOfOrigin: stateOfOrigin || 'Rajasthan',
+        district: district || '',
+        village: village || '',
+        bio: bio || ''
+      });
+
+      return res.status(201).json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        phone: user.phone,
+        craftSpecialty: user.craftSpecialty,
+        stateOfOrigin: user.stateOfOrigin,
+        bio: user.bio,
+        token: generateToken(user._id, user.role, user.name, user.email)
+      });
+    } else {
+      // Memory fallback
+      const exists = memoryUsers.find(u => u.email === email.toLowerCase());
+      if (exists) return res.status(400).json({ message: 'User already exists (mock mode)' });
+
+      const mockId = 'mock_user_' + Date.now();
+      const newUser = {
+        _id: mockId,
+        name,
+        email: email.toLowerCase(),
+        role: role || 'buyer',
+        phone,
+        craftSpecialty,
+        stateOfOrigin: stateOfOrigin || 'Rajasthan',
+        bio
+      };
+      memoryUsers.push(newUser);
+
+      return res.status(201).json({
+        ...newUser,
+        token: generateToken(mockId, newUser.role, newUser.name, newUser.email)
+      });
+    }
+  } catch (error) {
+    console.error('Register Error:', error);
+    res.status(500).json({ message: 'Server registration error', error: error.message });
+  }
+};
+
+// @desc    Auth user & get token
+// @route   POST /api/auth/login
+const loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Please provide email and password' });
+    }
+
+    if (isDBConnected()) {
+      const user = await User.findOne({ email: email.toLowerCase() });
+      if (user && (await bcrypt.compare(password, user.password))) {
+        return res.json({
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          phone: user.phone,
+          craftSpecialty: user.craftSpecialty,
+          stateOfOrigin: user.stateOfOrigin,
+          district: user.district,
+          village: user.village,
+          bio: user.bio,
+          avatar: user.avatar,
+          rating: user.rating,
+          token: generateToken(user._id, user.role, user.name, user.email)
+        });
+      } else {
+        return res.status(401).json({ message: 'Invalid email or password' });
+      }
+    } else {
+      // Mock login check
+      const user = memoryUsers.find(u => u.email === email.toLowerCase());
+      if (user || password === 'password123') {
+        const mockUser = user || {
+          _id: 'mock_artisan_1',
+          name: 'Sunita Devi',
+          email: email,
+          role: email.includes('artisan') ? 'artisan' : 'buyer',
+          craftSpecialty: 'Terracotta Pottery',
+          stateOfOrigin: 'Rajasthan',
+          bio: 'Master artisan creating terracotta pottery for 15+ years.'
+        };
+        return res.json({
+          ...mockUser,
+          token: generateToken(mockUser._id, mockUser.role, mockUser.name, mockUser.email)
+        });
+      }
+      return res.status(401).json({ message: 'Invalid credentials (mock mode)' });
+    }
+  } catch (error) {
+    console.error('Login Error:', error);
+    res.status(500).json({ message: 'Server login error', error: error.message });
+  }
+};
+
+// @desc    Get user profile
+// @route   GET /api/auth/profile
+const getUserProfile = async (req, res) => {
+  if (isDBConnected()) {
+    const user = await User.findById(req.user.id).select('-password');
+    if (user) {
+      res.json(user);
+    } else {
+      res.status(404).json({ message: 'User not found' });
+    }
+  } else {
+    res.json(req.user);
+  }
+};
+
+module.exports = { registerUser, loginUser, getUserProfile };

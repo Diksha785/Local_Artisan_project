@@ -1,0 +1,23 @@
+# Node dependencies
+node_modules/
+**/node_modules/
+
+# Production builds
+dist/
+**/dist/
+
+# Environment variables
+.env
+backend/.env
+frontend/.env
+*.env.local
+
+# Uploaded local images
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# IDE & OS files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

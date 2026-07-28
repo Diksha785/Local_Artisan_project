@@ -219,4 +219,61 @@ const forgotPassword = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser, getUserProfile, forgotPassword };
+// @desc    Reset Password with Token
+// @route   PUT /api/auth/reset-password/:resetToken
+const resetPassword = async (req, res) => {
+  try {
+    const { resetToken } = req.params;
+    const { password } = req.body;
+
+    if (!password || password.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters long' });
+    }
+
+    // Hash the token provided in the URL to compare with the DB hash
+    const resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    if (isDBConnected()) {
+      const user = await User.findOne({
+        resetPasswordToken,
+        resetPasswordExpire: { $gt: Date.now() }
+      });
+
+      if (!user) {
+        return res.status(400).json({ message: 'Invalid or expired password reset token' });
+      }
+
+      // Hash new password using bcrypt
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(password, salt);
+
+      // Clear reset token fields
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpire = undefined;
+
+      await user.save();
+
+      return res.json({
+        success: true,
+        message: 'Password reset successful. You can now log in with your new password.'
+      });
+    } else {
+      // Mock fallback
+      const user = memoryUsers.find(u => u.resetPasswordToken === resetPasswordToken);
+      if (user) {
+        user.password = password;
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpire = undefined;
+      }
+      return res.json({
+        success: true,
+        message: 'Password reset successful (mock mode).'
+      });
+    }
+  } catch (error) {
+    console.error('Reset Password Error:', error);
+    res.status(500).json({ message: 'Server error during password reset', error: error.message });
+  }
+};
+
+module.exports = { registerUser, loginUser, getUserProfile, forgotPassword, resetPassword };

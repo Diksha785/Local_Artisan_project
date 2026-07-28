@@ -157,61 +157,90 @@ export default function ArtisanDashboardPage() {
 
       {/* Orders Management Table */}
       <section className="bg-white border border-amber-200 rounded-3xl p-6 shadow-xs space-y-6">
-        <div className="flex items-center justify-between border-b border-amber-100 pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-amber-100 pb-4">
           <div>
             <h3 className="font-serif font-bold text-stone-900 text-xl">Customer Craft Orders</h3>
-            <p className="text-xs text-stone-500 mt-0.5">Update fulfillment status for your buyers</p>
+            <p className="text-xs text-stone-500 mt-0.5">Manage fulfillment progress for incoming buyer orders</p>
           </div>
           <button
             onClick={loadDashboardData}
-            className="p-2 text-stone-600 hover:text-terracotta-600 hover:bg-amber-50 rounded-xl transition-colors"
+            className="p-2 text-stone-600 hover:text-terracotta-600 hover:bg-amber-50 rounded-xl transition-colors cursor-pointer self-start sm:self-auto flex items-center gap-1 text-xs font-bold"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className="w-4 h-4 text-terracotta-600" />
+            <span>Refresh Table</span>
           </button>
         </div>
 
         {orders.length === 0 ? (
-          <p className="text-xs text-stone-500 italic text-center py-6">No customer orders received yet.</p>
+          <div className="py-12 text-center space-y-3 bg-amber-50/40 rounded-2xl border border-amber-100">
+            <Package className="w-10 h-10 text-stone-400 mx-auto" />
+            <p className="text-xs font-bold text-stone-700">No Customer Orders Received Yet</p>
+            <p className="text-[11px] text-stone-500 max-w-sm mx-auto">
+              New orders placed by buyers for your handmade craft listings will appear here automatically.
+            </p>
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-amber-200 text-[11px] uppercase font-bold text-stone-500 bg-amber-50/50">
-                  <th className="p-3">Order ID</th>
-                  <th className="p-3">Buyer Name</th>
-                  <th className="p-3">Craft Items</th>
-                  <th className="p-3">Total Amount</th>
-                  <th className="p-3">Status</th>
-                  <th className="p-3 text-right">Update Fulfillment</th>
+                <tr className="border-b border-amber-200 text-[11px] uppercase font-bold text-stone-500 bg-amber-50/60">
+                  <th className="p-3.5">Order ID & Date</th>
+                  <th className="p-3.5">Buyer & Delivery</th>
+                  <th className="p-3.5">Craft Items Purchased</th>
+                  <th className="p-3.5">Total & Payment</th>
+                  <th className="p-3.5">Current Status</th>
+                  <th className="p-3.5 text-right">Fulfillment Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-amber-100 text-xs font-semibold text-stone-800">
                 {orders.map((order) => (
-                  <tr key={order._id} className="hover:bg-amber-50/30 transition-colors">
-                    <td className="p-3 font-mono font-bold text-stone-900">#{order._id}</td>
-                    <td className="p-3">
+                  <tr key={order._id} className="hover:bg-amber-50/40 transition-colors">
+                    <td className="p-3.5">
+                      <span className="font-mono font-bold text-stone-900 block">#{order._id}</span>
+                      <span className="text-[10px] text-stone-500 font-normal">
+                        {new Date(order.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </span>
+                    </td>
+                    <td className="p-3.5">
                       <div>
-                        <span className="block font-bold">{order.buyerName}</span>
-                        <span className="text-[10px] text-stone-400">{order.shippingAddress?.city}</span>
+                        <span className="block font-extrabold text-stone-900">{order.buyerName}</span>
+                        <span className="text-[11px] text-stone-600 font-medium block">
+                          {order.shippingAddress?.city}, {order.shippingAddress?.state}
+                        </span>
+                        {order.shippingAddress?.phone && (
+                          <span className="text-[10px] text-stone-400 font-mono">Ph: {order.shippingAddress.phone}</span>
+                        )}
                       </div>
                     </td>
-                    <td className="p-3">
-                      {order.items?.map((item, idx) => (
-                        <span key={idx} className="block line-clamp-1">
-                          {item.title} (x{item.quantity})
-                        </span>
-                      ))}
+                    <td className="p-3.5">
+                      <div className="space-y-1.5 max-w-xs">
+                        {order.items?.map((item, idx) => (
+                          <div key={idx} className="flex items-center gap-2">
+                            {item.image && (
+                              <img src={item.image} alt={item.title} className="w-7 h-7 object-cover rounded-md border border-amber-200" />
+                            )}
+                            <span className="text-stone-800 text-[11px] font-bold truncate">
+                              {item.title} <span className="text-stone-500 font-medium">({item.quantity}x)</span>
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </td>
-                    <td className="p-3 font-bold text-terracotta-600">₹{order.totalAmount?.toLocaleString('en-IN')}</td>
-                    <td className="p-3">
+                    <td className="p-3.5">
+                      <span className="font-black text-stone-900 block text-sm">₹{order.totalAmount?.toLocaleString('en-IN')}</span>
+                      <span className="inline-block text-[10px] font-bold text-terracotta-700 bg-terracotta-50 px-2 py-0.5 rounded-md border border-terracotta-200/60 mt-0.5">
+                        {order.paymentMethod || 'UPI'}
+                      </span>
+                    </td>
+                    <td className="p-3.5">
                       <OrderStatusBadge status={order.orderStatus} />
                     </td>
-                    <td className="p-3 text-right">
+                    <td className="p-3.5 text-right">
                       <select
                         value={order.orderStatus}
                         disabled={updatingId === order._id}
                         onChange={(e) => handleStatusChange(order._id, e.target.value)}
-                        className="bg-amber-50 border border-amber-300 rounded-xl px-2.5 py-1.5 text-xs font-bold text-stone-800 outline-none focus:ring-2 focus:ring-amber-300 cursor-pointer"
+                        className="bg-amber-50 border border-amber-300 rounded-xl px-3 py-1.5 text-xs font-bold text-stone-800 outline-none focus:ring-2 focus:ring-amber-300 cursor-pointer disabled:opacity-50"
                       >
                         <option value="Pending">Pending</option>
                         <option value="Processing">Processing / Crafting</option>

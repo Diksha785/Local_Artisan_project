@@ -94,12 +94,14 @@ const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
+    if (!email || !password || !email.trim() || !password.trim()) {
       return res.status(400).json({ message: 'Please provide email and password' });
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
+
     if (isDBConnected()) {
-      const user = await User.findOne({ email: email.toLowerCase() });
+      const user = await User.findOne({ email: normalizedEmail });
       if (user && (await bcrypt.compare(password, user.password))) {
         return res.json({
           _id: user._id,
@@ -120,14 +122,14 @@ const loginUser = async (req, res) => {
         return res.status(401).json({ message: 'Invalid email or password' });
       }
     } else {
-      // Mock login check
-      const user = memoryUsers.find(u => u.email === email.toLowerCase());
+      // Mock login check for demonstration / offline database fallback
+      const user = memoryUsers.find(u => u.email === normalizedEmail);
       if (user || password === 'password123') {
         const mockUser = user || {
           _id: 'mock_artisan_1',
-          name: 'Sunita Devi',
-          email: email,
-          role: email.includes('artisan') ? 'artisan' : 'buyer',
+          name: normalizedEmail.includes('artisan') ? 'Sunita Devi' : 'Ananya Roy',
+          email: normalizedEmail,
+          role: normalizedEmail.includes('artisan') ? 'artisan' : 'buyer',
           craftSpecialty: 'Terracotta Pottery',
           stateOfOrigin: 'Rajasthan',
           bio: 'Master artisan creating terracotta pottery for 15+ years.'
@@ -137,7 +139,7 @@ const loginUser = async (req, res) => {
           token: generateToken(mockUser._id, mockUser.role, mockUser.name, mockUser.email)
         });
       }
-      return res.status(401).json({ message: 'Invalid credentials (mock mode)' });
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
   } catch (error) {
     console.error('Login Error:', error);

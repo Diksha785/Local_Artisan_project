@@ -38,6 +38,7 @@ export default function ArtisanDashboardPage() {
   };
 
   const [statusNotification, setStatusNotification] = useState('');
+  const [orderStatusFilter, setOrderStatusFilter] = useState('All');
 
   const handleStatusChange = async (orderId, newStatus) => {
     setUpdatingId(orderId);
@@ -55,6 +56,18 @@ export default function ArtisanDashboardPage() {
     } finally {
       setUpdatingId(null);
     }
+  };
+
+  const statusOptions = ['All', 'Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
+
+  const filteredOrders = orders.filter((order) => {
+    if (orderStatusFilter === 'All') return true;
+    return order.orderStatus === orderStatusFilter;
+  });
+
+  const getStatusCount = (status) => {
+    if (status === 'All') return orders.length;
+    return orders.filter((o) => o.orderStatus === status).length;
   };
 
   if (loading) {
@@ -190,6 +203,37 @@ export default function ArtisanDashboardPage() {
           </button>
         </div>
 
+        {/* Status Filter Tab Pills */}
+        {orders.length > 0 && (
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+            {statusOptions.map((st) => {
+              const count = getStatusCount(st);
+              const isActive = orderStatusFilter === st;
+              return (
+                <button
+                  key={st}
+                  type="button"
+                  onClick={() => setOrderStatusFilter(st)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                    isActive
+                      ? 'bg-stone-900 text-white shadow-xs'
+                      : 'bg-amber-50/80 text-stone-700 hover:bg-amber-100 border border-amber-200'
+                  }`}
+                >
+                  <span>{st === 'All' ? 'All Orders' : st}</span>
+                  <span
+                    className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                      isActive ? 'bg-amber-400 text-stone-900' : 'bg-amber-200/70 text-stone-800'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {orders.length === 0 ? (
           <div className="py-12 text-center space-y-3 bg-amber-50/40 rounded-2xl border border-amber-100">
             <Package className="w-10 h-10 text-stone-400 mx-auto" />
@@ -197,6 +241,17 @@ export default function ArtisanDashboardPage() {
             <p className="text-[11px] text-stone-500 max-w-sm mx-auto">
               New orders placed by buyers for your handmade craft listings will appear here automatically.
             </p>
+          </div>
+        ) : filteredOrders.length === 0 ? (
+          <div className="py-8 text-center space-y-2 bg-amber-50/30 rounded-2xl border border-amber-100">
+            <p className="text-xs font-bold text-stone-700">No orders matching "{orderStatusFilter}" status</p>
+            <button
+              type="button"
+              onClick={() => setOrderStatusFilter('All')}
+              className="text-xs font-bold text-terracotta-600 hover:underline cursor-pointer"
+            >
+              Show All Orders ({orders.length})
+            </button>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -212,7 +267,7 @@ export default function ArtisanDashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-amber-100 text-xs font-semibold text-stone-800">
-                {orders.map((order) => (
+                {filteredOrders.map((order) => (
                   <tr key={order._id} className="hover:bg-amber-50/40 transition-colors">
                     <td className="p-3.5">
                       <span className="font-mono font-bold text-stone-900 block">#{order._id}</span>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Save, Sparkles, Volume2 } from 'lucide-react';
+import { ArrowLeft, Save, Sparkles, Volume2, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import ImageUploader from '../components/ImageUploader';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -12,6 +12,9 @@ export default function ProductFormPage() {
   const { user } = useAuth();
 
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(isEdit);
+  const [formError, setFormError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const [images, setImages] = useState([]);
 
   const [formData, setFormData] = useState({
@@ -56,6 +59,8 @@ export default function ProductFormPage() {
   useEffect(() => {
     if (isEdit) {
       async function loadExistingProduct() {
+        setFetching(true);
+        setFormError('');
         try {
           const prod = await api.getProductById(id);
           if (prod) {
@@ -63,19 +68,22 @@ export default function ProductFormPage() {
               title: prod.title || '',
               description: prod.description || '',
               audioStory: prod.audioStory || '',
-              price: prod.price || '',
+              price: prod.price !== undefined ? prod.price : '',
               category: prod.category || 'Pottery & Terracotta',
               stateOfOrigin: prod.stateOfOrigin || 'Rajasthan',
-              materialsUsed: Array.isArray(prod.materialsUsed) ? prod.materialsUsed.join(', ') : '',
+              materialsUsed: Array.isArray(prod.materialsUsed) ? prod.materialsUsed.join(', ') : (prod.materialsUsed || ''),
               dimensions: prod.dimensions || '',
               weight: prod.weight || '',
-              stock: prod.stock || 1,
+              stock: prod.stock !== undefined ? prod.stock : 1,
               ecoFriendly: prod.ecoFriendly !== undefined ? prod.ecoFriendly : true
             });
             setImages(prod.images || []);
           }
         } catch (err) {
-          console.error(err);
+          console.error('Failed to load product details for editing:', err);
+          setFormError('Failed to load existing craft details.');
+        } finally {
+          setFetching(false);
         }
       }
       loadExistingProduct();
@@ -84,9 +92,26 @@ export default function ProductFormPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setFormError('');
+    setSuccessMsg('');
+
+    if (!formData.title.trim()) {
+      setFormError('Please enter a product title.');
+      return;
+    }
 
     if (images.length === 0) {
-      alert('Please upload at least 1 image of your craft');
+      setFormError('Please upload at least 1 craft image for your listing.');
+      return;
+    }
+
+    if (Number(formData.price) <= 0) {
+      setFormError('Price must be greater than zero.');
+      return;
+    }
+
+    if (Number(formData.stock) < 0) {
+      setFormError('Stock quantity cannot be negative.');
       return;
     }
 
@@ -98,22 +123,38 @@ export default function ProductFormPage() {
         price: Number(formData.price),
         stock: Number(formData.stock),
         images,
-        materialsUsed: formData.materialsUsed.split(',').map((s) => s.trim()).filter(Boolean)
+        materialsUsed: formData.materialsUsed
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
       };
 
       if (isEdit) {
         await api.updateProduct(id, payload);
+        setSuccessMsg('Craft listing updated successfully!');
       } else {
         await api.createProduct(payload);
+        setSuccessMsg('New craft listing published successfully!');
       }
 
-      navigate('/artisan/dashboard');
+      setTimeout(() => {
+        navigate('/artisan/products');
+      }, 1000);
     } catch (err) {
-      alert(err.message || 'Failed to save product listing');
+      setFormError(err.message || 'Failed to save craft listing.');
     } finally {
       setLoading(false);
     }
   };
+
+  if (fetching) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-20 text-center space-y-4">
+        <Loader2 className="w-10 h-10 text-terracotta-600 animate-spin mx-auto" />
+        <p className="text-sm font-semibold text-stone-600">Loading craft details for editing...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
@@ -131,6 +172,20 @@ export default function ProductFormPage() {
           {isEdit ? 'Edit Craft Listing' : 'Create New Craft Listing'}
         </h1>
       </div>
+
+      {formError && (
+        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-2xl flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+          <span>{formError}</span>
+        </div>
+      )}
+
+      {successMsg && (
+        <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-2xl flex items-center gap-2">
+          <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+          <span>{successMsg}</span>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="bg-white border border-amber-200 p-6 sm:p-8 rounded-3xl space-y-6 shadow-xs">
         

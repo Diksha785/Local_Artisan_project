@@ -1,11 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Edit, Trash2, ExternalLink, Star, Leaf, Image as ImageIcon, Package } from 'lucide-react';
+import { Plus, Edit, Trash2, ExternalLink, Star, Leaf, Image as ImageIcon, Package, Search, X, Filter } from 'lucide-react';
 import { api } from '../services/api';
 
 export default function ArtisanProductsPage() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+
+  const categories = [
+    'All',
+    'Pottery & Terracotta',
+    'Handloom & Textiles',
+    'Woodcraft & Carvings',
+    'Metalcraft & Dhokra',
+    'Folk Art & Paintings',
+    'Jewelry & Ornaments',
+    'Bamboo & Jute',
+    'Other Crafts'
+  ];
 
   useEffect(() => {
     loadProducts();
@@ -33,6 +47,20 @@ export default function ArtisanProductsPage() {
       alert(err.message || 'Delete failed');
     }
   };
+
+  const filteredProducts = products.filter((product) => {
+    const q = searchQuery.toLowerCase().trim();
+    const matchesSearch =
+      !q ||
+      product.title?.toLowerCase().includes(q) ||
+      product.description?.toLowerCase().includes(q) ||
+      product.category?.toLowerCase().includes(q) ||
+      (Array.isArray(product.materialsUsed) && product.materialsUsed.some((m) => m.toLowerCase().includes(q)));
+
+    const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
+
+    return matchesSearch && matchesCategory;
+  });
 
   if (loading) {
     return (
@@ -68,6 +96,62 @@ export default function ArtisanProductsPage() {
         </Link>
       </div>
 
+      {/* Search & Filter Controls */}
+      {products.length > 0 && (
+        <div className="bg-white border border-amber-200 p-4 rounded-2xl shadow-xs flex flex-col sm:flex-row items-center gap-3">
+          {/* Search Input */}
+          <div className="relative flex-1 w-full">
+            <input
+              type="text"
+              placeholder="Search crafts by title, material, or keyword..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-amber-50/50 border border-amber-300 rounded-xl pl-9 pr-8 py-2.5 text-xs text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
+            />
+            <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 p-0.5"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Category Dropdown */}
+          <div className="relative w-full sm:w-64">
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="w-full bg-amber-50/50 border border-amber-300 rounded-xl pl-8 pr-3 py-2.5 text-xs font-semibold text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-400 appearance-none cursor-pointer"
+            >
+              {categories.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat === 'All' ? 'All Categories' : cat}
+                </option>
+              ))}
+            </select>
+            <Filter className="w-3.5 h-3.5 text-terracotta-600 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
+
+          {/* Active Filter Clear */}
+          {(searchQuery || selectedCategory !== 'All') && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedCategory('All');
+              }}
+              className="text-xs font-bold text-terracotta-600 hover:underline whitespace-nowrap cursor-pointer px-2"
+            >
+              Reset Filters
+            </button>
+          )}
+        </div>
+      )}
+
       {products.length === 0 ? (
         <div className="bg-white border border-amber-200 p-12 rounded-3xl text-center space-y-4 shadow-xs">
           <div className="w-16 h-16 bg-amber-100/80 rounded-2xl flex items-center justify-center mx-auto text-terracotta-600">
@@ -85,9 +169,26 @@ export default function ArtisanProductsPage() {
             <span>Create Product Listing</span>
           </Link>
         </div>
+      ) : filteredProducts.length === 0 ? (
+        <div className="bg-white border border-amber-200 p-10 rounded-3xl text-center space-y-3 shadow-xs">
+          <h3 className="text-base font-bold text-stone-900">No Matching Crafts Found</h3>
+          <p className="text-xs text-stone-500">
+            No products match your search query "{searchQuery}" in "{selectedCategory}".
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setSearchQuery('');
+              setSelectedCategory('All');
+            }}
+            className="bg-amber-100 hover:bg-amber-200 text-stone-900 font-bold text-xs px-4 py-2 rounded-xl transition-colors cursor-pointer"
+          >
+            Clear Search & Category Filters
+          </button>
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {products.map((product) => (
+          {filteredProducts.map((product) => (
             <div
               key={product._id}
               className="bg-white border border-amber-200/90 rounded-3xl overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between group"

@@ -5,11 +5,31 @@ const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('user');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem('user');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      console.error('Failed to parse saved user session from localStorage:', e);
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      return null;
+    }
   });
+
+  const [token, setToken] = useState(() => {
+    return localStorage.getItem('token') || null;
+  });
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // Sync token state on initial mount / rehydration
+  useEffect(() => {
+    const storedToken = localStorage.getItem('token');
+    if (storedToken) {
+      setToken(storedToken);
+    }
+  }, []);
 
   const login = async (credentials) => {
     setLoading(true);
@@ -18,7 +38,10 @@ export const AuthProvider = ({ children }) => {
       const data = await api.login(credentials);
       setUser(data);
       localStorage.setItem('user', JSON.stringify(data));
-      if (data.token) localStorage.setItem('token', data.token);
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        setToken(data.token);
+      }
       return data;
     } catch (err) {
       setError(err.message);
@@ -35,7 +58,10 @@ export const AuthProvider = ({ children }) => {
       const data = await api.register(userData);
       setUser(data);
       localStorage.setItem('user', JSON.stringify(data));
-      if (data.token) localStorage.setItem('token', data.token);
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        setToken(data.token);
+      }
       return data;
     } catch (err) {
       setError(err.message);
@@ -47,6 +73,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     setUser(null);
+    setToken(null);
     localStorage.removeItem('user');
     localStorage.removeItem('token');
   };
@@ -54,10 +81,11 @@ export const AuthProvider = ({ children }) => {
   const isArtisan = user && (user.role === 'artisan' || user.role === 'admin');
 
   return (
-    <AuthContext.Provider value={{ user, isArtisan, login, register, logout, loading, error }}>
+    <AuthContext.Provider value={{ user, token, isArtisan, login, register, logout, loading, error }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
 export const useAuth = () => useContext(AuthContext);
+

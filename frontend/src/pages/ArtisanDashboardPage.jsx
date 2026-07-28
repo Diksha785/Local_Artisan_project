@@ -37,13 +37,18 @@ export default function ArtisanDashboardPage() {
     }
   };
 
+  const [statusNotification, setStatusNotification] = useState('');
+
   const handleStatusChange = async (orderId, newStatus) => {
     setUpdatingId(orderId);
+    setStatusNotification('');
     try {
       await api.updateOrderStatus(orderId, {
         status: newStatus,
         note: `Order status updated to ${newStatus} by artisan`
       });
+      setStatusNotification(`Order #${orderId} status updated to "${newStatus}" successfully!`);
+      setTimeout(() => setStatusNotification(''), 4000);
       loadDashboardData();
     } catch (err) {
       alert(err.message || 'Status update failed');
@@ -157,6 +162,20 @@ export default function ArtisanDashboardPage() {
 
       {/* Orders Management Table */}
       <section className="bg-white border border-amber-200 rounded-3xl p-6 shadow-xs space-y-6">
+        
+        {/* Status Change Notification Banner */}
+        {statusNotification && (
+          <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-xs font-bold flex items-center justify-between animate-fadeIn">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span>{statusNotification}</span>
+            </div>
+            <button onClick={() => setStatusNotification('')} className="text-emerald-600 hover:text-emerald-800 p-0.5">
+              ×
+            </button>
+          </div>
+        )}
+
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-amber-100 pb-4">
           <div>
             <h3 className="font-serif font-bold text-stone-900 text-xl">Customer Craft Orders</h3>

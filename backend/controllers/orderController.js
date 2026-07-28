@@ -1,6 +1,11 @@
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const mongoose = require('mongoose');
+const {
+  sendOrderConfirmationNotification,
+  sendSellerOrderNotification,
+  sendStatusUpdateNotification
+} = require('../utils/notificationService');
 
 const isDBConnected = () => mongoose.connection.readyState === 1;
 
@@ -110,6 +115,10 @@ const createOrder = async (req, res) => {
         }
       }
 
+      // Dispatch notifications asynchronously
+      sendOrderConfirmationNotification(order);
+      sendSellerOrderNotification(order);
+
       return res.status(201).json(order);
     } else {
       const newOrder = {
@@ -128,6 +137,11 @@ const createOrder = async (req, res) => {
       };
 
       localOrders.unshift(newOrder);
+
+      // Dispatch notifications asynchronously
+      sendOrderConfirmationNotification(newOrder);
+      sendSellerOrderNotification(newOrder);
+
       return res.status(201).json(newOrder);
     }
   } catch (error) {
@@ -194,13 +208,18 @@ const updateOrderStatus = async (req, res) => {
       order.orderStatus = status;
       if (status === 'Delivered') order.paymentStatus = 'Completed';
 
+      const updateNote = note || `Status updated to ${status} by artisan`;
       order.timeline.push({
         status,
-        note: note || `Status updated to ${status} by artisan`,
+        note: updateNote,
         updatedAt: new Date()
       });
 
       await order.save();
+
+      // Dispatch status update notification asynchronously
+      sendStatusUpdateNotification(order, status, updateNote);
+
       return res.json(order);
     } else {
       const order = localOrders.find(o => o._id.toString() === id.toString());
@@ -209,11 +228,15 @@ const updateOrderStatus = async (req, res) => {
       order.orderStatus = status;
       if (status === 'Delivered') order.paymentStatus = 'Completed';
 
+      const updateNote = note || `Status updated to ${status} by artisan`;
       order.timeline.push({
         status,
-        note: note || `Status updated to ${status} by artisan`,
+        note: updateNote,
         updatedAt: new Date()
       });
+
+      // Dispatch status update notification asynchronously
+      sendStatusUpdateNotification(order, status, updateNote);
 
       return res.json(order);
     }
